@@ -58,7 +58,7 @@ const personalityStyles = [
     value: "steve-jobs",
     name: "Steve Jobs",
     image:
-      "https://images.unsplash.com/photo-1471293082634-905c2f92dea9?w=50&h=50&fit=crop&crop=faces&q=80",
+      "https://media.licdn.com/dms/image/v2/C4E03AQGU6Y0AOGqTdQ/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1644504735058?e=1742428800&v=beta&t=AbG0Hzl1dZlyXpI63fSTRQzeY_WDIYPi3kinNwzEMBg",
     description: "Visionary and persuasive",
   },
   {
@@ -144,6 +144,34 @@ export default function ContentGenerator() {
       });
     }
   };
+// ----------- AJOUT DE CETTE FONCTION D’APPEL API -----------
+const callChatGPT = async (data: ContentGeneratorFormValues) => {
+  const payload = {
+    context: data.context,
+    tone: data.tone,
+    audience: data.audience,
+    keywords: data.keywords,
+    // Ajoute ici tout autre paramètre à transmettre à l’API
+  };
+
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Request failed with status ${res.status}`);
+    }
+
+    const result = await res.json();
+    return result.text;
+  } catch (error: any) {
+    console.error("Error calling ChatGPT API:", error);
+    throw error;
+  }
+};
 
   const onSubmit: SubmitHandler<ContentGeneratorFormValues> = async (data) => {
     setIsGenerating(true);
@@ -153,16 +181,27 @@ export default function ContentGenerator() {
       duration: 3000,
     });
 
-    // Simulation de génération de contenu
-    setTimeout(() => {
-      setGeneratedContent("Your generated content will appear here...");
-      setIsGenerating(false);
+
+    try {
+      // On appelle la fonction qui va ping l'API
+      const generatedText = await callChatGPT(data);
+      setGeneratedContent(generatedText);
+      
       toast({
         title: "Content generated!",
         description: "Your content is ready.",
         duration: 3000,
       });
-    }, 2000);
+    } catch (err) {
+      toast({
+        title: "Generation error",
+        description: "Something went wrong. Check console for details.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const copyToClipboard = () => {
@@ -268,11 +307,12 @@ export default function ContentGenerator() {
               <Label className="text-lg font-medium">
                 Document Context Section
               </Label>
-              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-4">
+
                 <div className="space-y-2">
                   <Textarea
                     placeholder="Type or paste your context here"
-                    className="min-h-[120px] bg-background"
+                    className="min-h-[200px] bg-background"
                     // 4. On enregistre correctement le champ 'context'
                     {...register("context")}
                   />
