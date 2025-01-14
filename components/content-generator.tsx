@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { Wand2, Upload, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -31,75 +31,100 @@ const templateOptions = [
     value: "blog",
     label: "Blog Post",
     emoji: "📝",
-    description: "Long-form articles with SEO optimization"
+    description: "Long-form articles with SEO optimization",
   },
   {
     value: "social",
     label: "Social Media",
     emoji: "📱",
-    description: "Engaging posts for social platforms"
+    description: "Engaging posts for social platforms",
   },
   {
     value: "email",
     label: "Email Campaign",
     emoji: "📧",
-    description: "Compelling email marketing content"
+    description: "Compelling email marketing content",
   },
   {
     value: "landing",
     label: "Landing Page",
     emoji: "🎯",
-    description: "Conversion-focused page content"
-  }
+    description: "Conversion-focused page content",
+  },
 ];
 
 const personalityStyles = [
   {
     value: "steve-jobs",
     name: "Steve Jobs",
-    image: "https://images.unsplash.com/photo-1471293082634-905c2f92dea9?w=50&h=50&fit=crop&crop=faces&q=80",
-    description: "Visionary and persuasive"
+    image:
+      "https://images.unsplash.com/photo-1471293082634-905c2f92dea9?w=50&h=50&fit=crop&crop=faces&q=80",
+    description: "Visionary and persuasive",
   },
   {
     value: "sam-altman",
     name: "Sam Altman",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=faces&q=80",
-    description: "Analytical and forward-thinking"
+    image:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=faces&q=80",
+    description: "Analytical and forward-thinking",
   },
   {
     value: "shreyas",
     name: "Shreyas Doshi",
-    image: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=50&h=50&fit=crop&crop=faces&q=80",
-    description: "Product-focused and strategic"
+    image:
+      "https://images.unsplash.com/photo-1463453091185-61582044d556?w=50&h=50&fit=crop&crop=faces&q=80",
+    description: "Product-focused and strategic",
   },
   {
     value: "pg",
     name: "Paul Graham",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=faces&q=80",
-    description: "Insightful and analytical"
+    image:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=faces&q=80",
+    description: "Insightful and analytical",
   },
   {
     value: "naval",
     name: "Naval Ravikant",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop&crop=faces&q=80",
-    description: "Philosophical and concise"
-  }
+    image:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop&crop=faces&q=80",
+    description: "Philosophical and concise",
+  },
 ];
+
+// 1. Définir l'interface du formulaire pour inclure TOUS les champs nécessaires
+interface ContentGeneratorFormValues {
+  template: string;       // si l'on souhaite récupérer la sélection du template
+  personality: string;    // si l'on souhaite récupérer la sélection de la personnalité
+  context: string;
+  keywords: string;
+  audience: string;
+  complexity: number;
+  ctaIntegration: number;
+  tone: string;
+  length: string;
+}
 
 export default function ContentGenerator() {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
-  const { register, handleSubmit } = useForm({
-    defaultValues: {
-      complexity: 3,
-      ctaIntegration: 50,
-      tone: "professional",
-      length: "medium"
-    }
-  });
+
+  // 2. Utiliser l'interface ci-dessus et inclure tous les champs dans defaultValues
+  const { register, handleSubmit, setValue, watch } =
+    useForm<ContentGeneratorFormValues>({
+      defaultValues: {
+        template: "blog",
+        personality: "steve-jobs",
+        context: "",
+        keywords: "",
+        audience: "",
+        complexity: 3,
+        ctaIntegration: 50,
+        tone: "professional",
+        length: "medium",
+      },
+    });
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -120,7 +145,7 @@ export default function ContentGenerator() {
     }
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit: SubmitHandler<ContentGeneratorFormValues> = async (data) => {
     setIsGenerating(true);
     toast({
       title: "Generating content...",
@@ -128,6 +153,7 @@ export default function ContentGenerator() {
       duration: 3000,
     });
 
+    // Simulation de génération de contenu
     setTimeout(() => {
       setGeneratedContent("Your generated content will appear here...");
       setIsGenerating(false);
@@ -163,7 +189,11 @@ export default function ContentGenerator() {
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Template</Label>
-                <Select defaultValue="blog">
+                <Select
+                  // 3. Pour lier le Select au react-hook-form, on utilise onValueChange + setValue
+                  defaultValue={watch("template")}
+                  onValueChange={(val) => setValue("template", val)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select template" />
                   </SelectTrigger>
@@ -198,7 +228,10 @@ export default function ContentGenerator() {
 
               <div className="space-y-2">
                 <Label>Personality Style</Label>
-                <Select defaultValue="steve-jobs">
+                <Select
+                  defaultValue={watch("personality")}
+                  onValueChange={(val) => setValue("personality", val)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -216,8 +249,12 @@ export default function ContentGenerator() {
                             />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{style.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{style.description}</p>
+                            <p className="text-sm font-medium truncate">
+                              {style.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {style.description}
+                            </p>
                           </div>
                         </div>
                       </SelectItem>
@@ -228,12 +265,15 @@ export default function ContentGenerator() {
             </div>
 
             <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-              <Label className="text-lg font-medium">Document Context Section</Label>
+              <Label className="text-lg font-medium">
+                Document Context Section
+              </Label>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Textarea
                     placeholder="Type or paste your context here"
                     className="min-h-[120px] bg-background"
+                    // 4. On enregistre correctement le champ 'context'
                     {...register("context")}
                   />
                 </div>
@@ -252,9 +292,13 @@ export default function ContentGenerator() {
                     >
                       <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
                       <div className="space-y-1">
-                        <p className="text-sm font-medium">Upload PDF document</p>
+                        <p className="text-sm font-medium">
+                          Upload PDF document
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                          {selectedFile ? selectedFile.name : "Only PDF files are supported"}
+                          {selectedFile
+                            ? selectedFile.name
+                            : "Only PDF files are supported"}
                         </p>
                       </div>
                     </label>
@@ -282,13 +326,22 @@ export default function ContentGenerator() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Tone</Label>
-                <RadioGroup defaultValue="professional" className="grid grid-cols-2 gap-4">
-                  {["formal", "informal", "humorous", "professional"].map((tone) => (
-                    <div key={tone} className="flex items-center space-x-2">
-                      <RadioGroupItem value={tone} id={tone} />
-                      <Label htmlFor={tone} className="capitalize">{tone}</Label>
-                    </div>
-                  ))}
+                {/* 5. On utilise onValueChange + setValue pour lier le RadioGroup à RHF */}
+                <RadioGroup
+                  defaultValue={watch("tone")}
+                  onValueChange={(val) => setValue("tone", val)}
+                  className="grid grid-cols-2 gap-4"
+                >
+                  {["formal", "informal", "humorous", "professional"].map(
+                    (tone) => (
+                      <div key={tone} className="flex items-center space-x-2">
+                        <RadioGroupItem value={tone} id={tone} />
+                        <Label htmlFor={tone} className="capitalize">
+                          {tone}
+                        </Label>
+                      </div>
+                    )
+                  )}
                 </RadioGroup>
               </div>
 
@@ -296,13 +349,14 @@ export default function ContentGenerator() {
                 <Label>Lexical Complexity</Label>
                 <TooltipProvider>
                   <Tooltip>
+                    {/* 6. Retirer {...register("complexity")} et utiliser onValueChange */}
                     <TooltipTrigger asChild>
                       <Slider
-                        defaultValue={[3]}
-                        max={5}
+                        defaultValue={[watch("complexity")]}
                         min={1}
+                        max={5}
                         step={1}
-                        {...register("complexity")}
+                        onValueChange={(val) => setValue("complexity", val[0])}
                       />
                     </TooltipTrigger>
                     <TooltipContent>
@@ -314,7 +368,11 @@ export default function ContentGenerator() {
 
               <div className="space-y-2">
                 <Label>Text Length</Label>
-                <RadioGroup defaultValue="medium" className="grid grid-cols-3 gap-4">
+                <RadioGroup
+                  defaultValue={watch("length")}
+                  onValueChange={(val) => setValue("length", val)}
+                  className="grid grid-cols-3 gap-4"
+                >
                   {[
                     { value: "short", label: "Short (250)" },
                     { value: "medium", label: "Medium (500)" },
@@ -332,27 +390,27 @@ export default function ContentGenerator() {
                 <Label>CTA Integration</Label>
                 <TooltipProvider>
                   <Tooltip>
+                    {/* 7. Même correction que pour complexity */}
                     <TooltipTrigger asChild>
                       <Slider
-                        defaultValue={[50]}
+                        defaultValue={[watch("ctaIntegration")]}
+                        min={0}
                         max={100}
                         step={1}
-                        {...register("ctaIntegration")}
+                        onValueChange={(val) => setValue("ctaIntegration", val[0])}
                       />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Adjust the level of call-to-action integration (0-100%)</p>
+                      <p>
+                        Adjust the level of call-to-action integration (0-100%)
+                      </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
             </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isGenerating}
-            >
+            <Button type="submit" className="w-full" disabled={isGenerating}>
               <Wand2 className="mr-2 h-4 w-4" />
               {isGenerating ? "Generating..." : "Generate Content"}
             </Button>
