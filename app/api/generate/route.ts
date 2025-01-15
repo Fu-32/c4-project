@@ -284,6 +284,9 @@ switch (personality) {
     },
     ];
 
+    console.log("Generated Prompt:", JSON.stringify(messages, null, 2))
+
+    
     // 6. CALL OPENAI // ALMOST THE SAME
     const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
