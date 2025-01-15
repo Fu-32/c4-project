@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OpenAI } from "openai";
 
+
+// Forcer l'exécution côté serveur même en mode export statique
+export const dynamic = "force-dynamic"; 
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -16,13 +20,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: "You are a helpful assistant." },
         {
           role: "user",
-          content: `
-          Context: ${context}.
-          Tone: ${tone}.
-          Audience: ${audience}.
-          Keywords: ${keywords}.
-          Generate content accordingly.
-          `,
+          content: `Context: ${context}. Tone: ${tone}. Audience: ${audience}. Keywords: ${keywords}. Generate content accordingly.`,
         },
       ],
     });
@@ -36,4 +34,12 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Bloquer toutes les autres méthodes que POST
+export async function GET() {
+  return NextResponse.json(
+    { error: "Method Not Allowed" },
+    { status: 405 }
+  );
 }

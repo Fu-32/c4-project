@@ -150,9 +150,16 @@ const callChatGPT = async (data: ContentGeneratorFormValues) => {
     context: data.context,
     tone: data.tone,
     audience: data.audience,
-    keywords: data.keywords,
+    keywords: data.keywords.split(",").map(k => k.trim()), // Nettoyage des mots-clés
+    complexity: data.complexity,
+    ctaIntegration: data.ctaIntegration,
+    length: data.length,
+    template: data.template,
+    personality: data.personality,
     // Ajoute ici tout autre paramètre à transmettre à l’API
   };
+  
+  console.log("Données envoyées à l'API :", payload); // Vérification
 
   try {
     const res = await fetch("/api/generate", {
