@@ -28,29 +28,24 @@ import Image from "next/image";
 
 const templateOptions = [
   {
-    value: "blog",
-    label: "Blog Post",
+    value: "release-notes",
+    label: "Release Notes",
     emoji: "📝",
-    description: "Long-form articles with SEO optimization",
+    description: "Detailed updates about your product release",
   },
   {
-    value: "social",
-    label: "Social Media",
-    emoji: "📱",
-    description: "Engaging posts for social platforms",
+    value: "user-stories",
+    label: "User Stories",
+    emoji: "👥",
+    description: "Standard user stories for agile teams",
   },
   {
-    value: "email",
-    label: "Email Campaign",
-    emoji: "📧",
-    description: "Compelling email marketing content",
+    value: "product-specs",
+    label: "Product Specs",
+    emoji: "⚙️",
+    description: "Technical and product requirements specification",
   },
-  {
-    value: "landing",
-    label: "Landing Page",
-    emoji: "🎯",
-    description: "Conversion-focused page content",
-  },
+
 ];
 
 const personalityStyles = [
