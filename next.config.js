@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone', // Permet l'utilisation des routes API dynamiques
+  output: 'standalone', // Utilisation du mode standalone pour les routes API
   eslint: {
     ignoreDuringBuilds: true,
   },
