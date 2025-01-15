@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
     ---
     ## Context
     Below is the user-provided context or summary extracted from an uploaded PDF/document:
+    - **CTA Text**: ${ctaText}
     "${context}"
 
     ---
@@ -212,29 +213,29 @@ const subPromptProductSpecs = `
     - Keep formatting in **Markdown** for clarity.
 `;
 
-    // 4. CHOOSE THE RIGHT SUB-PROMPT // NEW
-    let chosenSubPrompt = "";
-    switch (template) {
-        case "release-notes":
-        chosenSubPrompt = subPromptReleaseNotes;
-        break;
-        case "user-stories":
-        chosenSubPrompt = subPromptUserStories;
-        break;
-        case "product-specs":
-        chosenSubPrompt = subPromptProductSpecs;
-        break;
-        default:
-        // Fallback in case user picks something else
-        chosenSubPrompt = "No specialized template found for this document type.";
-        break;
-    }
+// 4. CHOOSE THE RIGHT SUB-PROMPT // NEW
+let chosenSubPrompt = "";
+switch (template) {
+    case "release-notes":
+    chosenSubPrompt = subPromptReleaseNotes;
+    break;
+    case "user-stories":
+    chosenSubPrompt = subPromptUserStories;
+    break;
+    case "product-specs":
+    chosenSubPrompt = subPromptProductSpecs;
+    break;
+    default:
+    // Fallback in case user picks something else
+    chosenSubPrompt = "No specialized template found for this document type.";
+    break;
+}
 
 const personalityTemplateSteveJobs = `
-    - **Visionary and Inspirational Tone:** Bold, motivational, and emphasizing innovation.
-    - **Style:** Direct, confident, and emotionally engaging.
-    - **Focus:** Encourage groundbreaking ideas, with a focus on long-term impact and transformative vision.
-    `;
+- **Visionary and Inspirational Tone:** Bold, motivational, and emphasizing innovation.
+- **Style:** Direct, confident, and emotionally engaging.
+- **Focus:** Encourage groundbreaking ideas, with a focus on long-term impact and transformative vision.
+`;
 
 const personalityTemplateSamAltman = `
 - **Analytical and Strategic Tone:** Logical, structured, and forward-looking.
@@ -248,7 +249,7 @@ const personalityTemplateShreyasDoshi = `
 - **Focus:** Emphasize user empathy, product-market fit, and clear decision-making frameworks.
 `;
 
-// 3. CHOOSE PERSONALITY TEMPLATE
+// 4.2 CHOOSE PERSONALITY TEMPLATE
 let personalityTemplate = "";
 
 switch (personality) {
@@ -275,12 +276,12 @@ switch (personality) {
         // That way, mainSystemPrompt and personalityTemplate will actually be interpolated at runtime.
         content: `${mainSystemPrompt}\n\n### Personality Style\n${personalityTemplate}`,
         // name est optionnel ; vous pouvez l’omettre si vous n’en avez pas besoin
-    } as ChatCompletionSystemMessageParam,
+    },
     {
         role: 'assistant',
         content: chosenSubPrompt,
         // name est optionnel ici aussi
-    } as ChatCompletionAssistantMessageParam,
+    },
     ];
 
     // 6. CALL OPENAI // ALMOST THE SAME
@@ -289,7 +290,7 @@ switch (personality) {
         messages,
         // You can tweak temperature, max_tokens, etc.:
         temperature: 0.7,
-        max_tokens: 1500,
+        max_tokens: 3000,
       });
       
       const text = response.choices[0]?.message?.content || "";

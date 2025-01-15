@@ -478,7 +478,7 @@ const callChatGPT = async (data: ContentGeneratorFormValues) => {
                   <div className="animate-pulse">Generating content...</div>
                 </div>
               ) : (
-                <div className="prose prose-sm">
+                <div className="prose prose-sm whitespace-pre-line">
                   {generatedContent || "Generated content will appear here"}
                 </div>
               )}
@@ -489,3 +489,4 @@ const callChatGPT = async (data: ContentGeneratorFormValues) => {
     </div>
   );
 }
+
