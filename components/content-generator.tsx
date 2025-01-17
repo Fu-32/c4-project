@@ -87,21 +87,21 @@ const personalityStyles = [
     value: 'steve-jobs',
     name: 'Steve Jobs',
     image:
-      'https://media.licdn.com/dms/image/v2/C4E03AQGU6Y0AOGqTdQ/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1644504735058?e=1742428800&v=beta&t=AbG0Hzl1dZlyXpI63fSTRQzeY_WDIYPi3kinNwzEMBg',
+      'images/steve-pic.png',
     description: 'Visionary and persuasive',
   },
   {
     value: 'sam-altman',
     name: 'Sam Altman',
     image:
-      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=faces&q=80',
+      'images/sam-pic.png',
     description: 'Analytical and forward-thinking',
   },
   {
     value: 'shreyas',
     name: 'Shreyas Doshi',
     image:
-      'https://images.unsplash.com/photo-1463453091185-61582044d556?w=50&h=50&fit=crop&crop=faces&q=80',
+      'images/shreyas-pic.png',
     description: 'Product-focused and strategic',
   },
 ];
@@ -278,7 +278,7 @@ export default function ContentGenerator() {
     };
 
     try {
-      const res = await fetch('/api/generatev3', {
+      const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
