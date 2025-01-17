@@ -333,7 +333,7 @@ Generate the content in clear, well-structured plain text. Follow these guidelin
         model: "gpt-4o",
         messages,
         temperature: 0.3,
-        max_tokens: 10000,
+        max_tokens: 1000,
       });
 
     const text = response.choices[0]?.message?.content || "";
