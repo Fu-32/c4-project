@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       length = "medium",
       template = "release-notes",
       personality = "steve-jobs",
+      outputContent = "text",
     } = body;
 
     // Valeurs par défaut pour les champs précédemment utilisés mais non envoyés par le front
@@ -58,9 +59,7 @@ Your task involves:
    - **Text Length**: ${length} (short ~250, medium ~500, long ~1000+)
    - **Target Audience**: ${JSON.stringify(audience)}
 
-   ## CTA Integration
-   - **Level**: ${ctaIntegration}
-   - **CTA Text**: ${ctaText}
+
 
    ## Keywords
    - **Integrate** (if relevant): ${keywords.join(", ")}
@@ -71,9 +70,13 @@ Your task involves:
 5. **Metadata Management:** Ensure all essential metadata is appropriately filled and managed, including cross-references.
 
 # Output Format
-- Generate a detailed, well-structured **${template}** in Markdown format that aligns with industry best practices and the specified style preferences.
+- Generate a detailed, well-structured **${template}** that aligns with industry best practices and the specified style preferences.
 - Add some moderate emoji style in the beginning or end of titles/subtitles (as relevant).
 - Each section should be properly formatted for Notion compatibility.
+- **Output Content Type**: The output should be generated in the format specified by the parameter \`${outputContent}\`. 
+  - If \`Notion\`, structure the output pour une intégration facile dans Notion en markdown et emoji apple.
+  - Si \`React\`, adaptez le contenu pour une utilisation dans une application React, donc en code.
+  - Sinon, générez un contenu en texte brut.
 
 # Notes
 - Personalities might adjust vocabulary, emphasis, etc.
@@ -167,7 +170,6 @@ ${context}
 ### Additional Personalization Notes
 - Integrate the user’s **tone** and **style** throughout.
 - Weave in keywords if relevant.
-- Keep it all in **Markdown** with headings for each story.
 `;
 
     const subPromptProductSpecs = `
@@ -217,8 +219,58 @@ ${context}
 ### Additional Personalization Notes
 - Apply ${tone}, ${personality} where relevant.
 - Adjust length based on ${length} (short, medium, long).
-- Keep formatting in **Markdown** for clarity.
 `;
+
+// Définition des outputscontentprompt 
+
+const subStyleReact = `
+
+## ## Output Format: React Code Integration
+
+Generate the content in the form of code suitable for a React application. Follow these guidelines:
+
+- **Valid Code**: Provide valid JavaScript/TypeScript code snippets with JSX that are compatible with a React environment.
+- **Reusable Components**: Structure the content as reusable components with a clear separation of concerns. For example, break down the UI into functional components as needed.
+- **Styling and Layout with Tailwind CSS**: Use only Tailwind CSS classes for styling and layout. Apply relevant Tailwind utility classes directly in the JSX to achieve the desired appearance and responsiveness.
+- **Comments and Documentation**: Include comments within the code to explain complex sections or implementation choices to aid developers in understanding the code.
+- **Context Adaptation**: The generated content should consider the provided context to create components that address specific needs, such as displaying data, forms, lists, etc.
+- **Optimization**: Ensure performance considerations by using appropriate React hooks (e.g., "useState", "useEffect") or other advanced features when necessary, and optimize code as needed.
+`;
+
+const subStyleNotion = `
+## Output Format: Notion Markdown with Apple Emojis
+
+Vous devez générer le contenu en format Markdown, spécifiquement adapté pour une intégration fluide dans Notion. Suivez ces directives :
+
+- **Structure Markdown** : Utilisez des titres ("#", "##", "##"), des listes à puces, des tableaux si nécessaire, pour organiser l'information clairement.
+- **Emojis Apple** : Intégrez des emojis compatibles avec Apple au début ou à la fin des titres et sous-titres pour ajouter une touche visuelle.
+- **Compatibilité Notion** : Assurez-vous que le Markdown est formaté pour être facilement copié-collé dans Notion : 
+  - Utilisez des sauts de ligne appropriés.
+  - Évitez des structures trop complexes qui pourraient ne pas se rendre correctement dans Notion.
+- **Clarté et Lisibilité** : Gardez le texte clair, concis et bien structuré, tout en respectant le style et la tonalité demandés dans le contexte.
+- **Sections Détaillées** : Décomposez le contenu en sections et sous-sections logiques afin de faciliter la lecture et la navigation dans Notion.
+
+Exemple d'application :
+- Titre principal avec un emoji Apple : "# 🎉 Titre Principal"
+- Sous-titre : "## 🍏 Sous-titre pertinent"
+- Liste à puces pour points importants.
+
+Générez le contenu en suivant ces principes pour garantir une intégration optimale dans Notion.
+`;
+
+const subStyleText = `
+Generate the content in clear, well-structured plain text. Follow these guidelines:
+	•	Clarity: Write fluid paragraphs without Markdown formatting or code, using simple and direct language.
+	•	Logical Structure: Organize the information into coherent sections or paragraphs, with a logical progression to guide the reader.
+	•	Context Adaptation: Integrate relevant details from the provided context to enrich the text and make it useful and informative.
+	•	Tone and Style: Adhere to the requested tone and style (e.g., professional, persuasive, etc.) to align with the indicated personality or style.
+	•	No Special Formatting: Do not include any Markdown tags, emojis, or code elements. The output must remain plain text, fully readable and directly usable as such.
+
+  Important Note:
+  If this option is selected, the output must not contain any Markdown formatting whatsoever. It is a top priority that the generated content remains in pure plain text 
+  without headings, lists, code blocks, or any other Markdown syntax. This ensures that the text is clean, simple, and fully accessible without additional formatting complications.
+`;
+
 
     // En fonction du template choisi, on sélectionne le Sub-Prompt approprié
     let chosenSubPrompt = "";
@@ -238,6 +290,24 @@ ${context}
         break;
     }
 
+    let chosenSubStyle = "";
+    switch (outputContent) {
+      case "notion":
+        chosenSubStyle = subStyleNotion;
+        break;
+      case "style":
+        chosenSubStyle = subStyleText;
+        break;
+      case "react":
+        chosenSubStyle = subStyleReact;
+        break;
+      default:
+        chosenSubStyle =
+          "No specialized template found for this document type.";
+        break;
+    }
+
+
     // Construit le tableau de messages à envoyer à l'API d'OpenAI
     const messages: ChatCompletionMessageParam[] = [
       {
@@ -246,8 +316,13 @@ ${context}
       },
       {
         role: "assistant",
+        content: chosenSubStyle,
+      },
+      {
+        role: "assistant",
         content: chosenSubPrompt,
       },
+
     ];
 
     // Log pour le debug
@@ -258,7 +333,7 @@ ${context}
         model: "gpt-4o",
         messages,
         temperature: 0.3,
-        max_tokens: 5000,
+        max_tokens: 10000,
       });
 
     const text = response.choices[0]?.message?.content || "";

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { Wand2, Upload, Trash2, X } from 'lucide-react';
+import { Wand2, Upload, Trash2, X, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -38,6 +38,28 @@ import {
 import Image from 'next/image';
 
 const MAX_FILES = 3;
+
+const outputContentOptions = [
+  {
+    value: 'notion',
+    label: 'Notion',
+    image: 'https://media.licdn.com/dms/image/v2/D560BAQFjFIUcTilH4w/company-logo_200_200/company-logo_200_200/0/1708112694181/notionhq_logo?e=1745452800&v=beta&t=cTYZGlijENxlsqRB3MdmsSOOXukgEAuj3OQV4XDuB64', // Remplacez par le chemin réel vers votre logo Notion
+    description: 'Copiable dans Notion',
+  },
+  {
+    value: 'react',
+    label: 'React',
+    image:
+    'https://media.licdn.com/dms/image/v2/C510BAQGXWP9awTLTpA/company-logo_200_200/company-logo_200_200/0/1630609383515?e=1745452800&v=beta&t=E53FJ5wcuF_RgSvReDRj8lctWfrwaUwhEiNhyWgeb1w',    
+    description: 'Copiable pour React',
+  },
+  // {
+  //   value: 'text',
+  //   label: 'Text',
+  //   image: 'https://media.geeksforgeeks.org/wp-content/uploads/20210921235140/txt-300x300.png', // Remplacez par le chemin réel vers une icône texte
+  //   description: 'Contenu brut en texte',
+  // },
+];
 
 const templateOptions = [
   {
@@ -89,6 +111,7 @@ interface UploadedFile {
   name: string;
   file: File;
   uploadedAt: Date;
+  text?: string; // Add optional text field for extracted content
 }
 
 interface ContentGeneratorFormValues {
@@ -108,7 +131,9 @@ interface ContentGeneratorFormValues {
   };
   complexity: number;
   length: string;
+  outputContent: "text" | "Notion" | "React";
 }
+
 
 export default function ContentGenerator() {
   const { toast } = useToast();
@@ -137,47 +162,80 @@ export default function ContentGenerator() {
         },
         complexity: 3,
         length: 'medium',
+        outputContent: 'text', // Defaulting to "text"
+
       },
     });
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (uploadedFiles.length >= MAX_FILES) {
-      toast({
-        title: 'Upload limit reached',
-        description: `You can only upload up to ${MAX_FILES} files. Please delete some files first.`,
-        duration: 3000,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (file.type === 'application/pdf') {
-      const newFile: UploadedFile = {
-        id: crypto.randomUUID(),
-        name: file.name,
-        file: file,
-        uploadedAt: new Date(),
-      };
-      
-      setUploadedFiles(prev => [...prev, newFile]);
-      
-      toast({
-        title: 'File uploaded',
-        description: `${file.name} has been added`,
-        duration: 3000,
-      });
-    } else {
-      toast({
-        title: 'Invalid file type',
-        description: 'Please upload only PDF files',
-        duration: 3000,
-        variant: 'destructive',
-      });
-    }
-  };
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+    
+      if (uploadedFiles.length >= MAX_FILES) {
+        toast({
+          title: 'Upload limit reached',
+          description: `You can only upload up to ${MAX_FILES} files. Please delete some files first.`,
+          duration: 3000,
+          variant: 'destructive',
+        });
+        return;
+      }
+    
+      if (file.type === 'application/pdf') {
+        const formData = new FormData();
+        formData.append('file', file);
+    
+        try {
+          const response = await fetch('/api/parse-pdf.js', {
+            method: 'POST',
+            body: formData,
+          });
+    
+          if (!response.ok) {
+            throw new Error('Failed to process the PDF file.');
+          }
+    
+          const result = await response.json();
+    
+          const newFile: UploadedFile = {
+            id: crypto.randomUUID(),
+            name: file.name,
+            file: file,
+            uploadedAt: new Date(),
+            text: result.text, // Include extracted text
+          };
+    
+          setUploadedFiles((prev) => [...prev, newFile]);
+    
+          toast({
+            title: 'File uploaded',
+            description: `${file.name} has been added`,
+            duration: 3000,
+          });
+        } catch (error) {
+          console.error('Error uploading or parsing the file:', error);
+    
+          toast({
+            title: 'Error processing file',
+            description: 'There was an error while extracting text from the PDF.',
+            duration: 3000,
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'Invalid file type',
+          description: 'Please upload only PDF files',
+          duration: 3000,
+          variant: 'destructive',
+        });
+      }
+    };
+  
+    // Combine uploaded files' text into a single string
+  const pdfTexts = uploadedFiles
+    .filter((file) => file.text) // Only include files with extracted text
+    .map((file) => file.text)
+    .join('\n\n'); // Combine texts with a separator
 
   const handleDeleteFile = async (fileId: string) => {
     setIsDeleting(true);
@@ -209,12 +267,14 @@ export default function ContentGenerator() {
 
   const callChatGPT = async (data: ContentGeneratorFormValues) => {
     const payload = {
-      context: data.context,
+      context: data.context + '\n\n' + pdfTexts, // Append the combined PDF text to the context
       audience: data.audience,
       complexity: data.complexity,
       length: data.length,
       template: data.template,
       personality: data.personality,
+      outputContent: data.outputContent,
+
     };
 
     try {
@@ -243,11 +303,14 @@ export default function ContentGenerator() {
       description: 'Please wait while we process your request.',
       duration: 3000,
     });
+    
+
 
     try {
       const generatedText = await callChatGPT(data);
       setGeneratedContent(generatedText);
 
+      
       toast({
         title: 'Content generated!',
         description: 'Your content is ready.',
@@ -297,7 +360,7 @@ export default function ContentGenerator() {
                   onValueChange={(val) => setValue('template', val)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select template" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {templateOptions.map((template) => (
@@ -322,7 +385,6 @@ export default function ContentGenerator() {
               <div className="space-y-2">
                 <Label>Personality Style</Label>
                 <Select
-                  defaultValue={watch('personality')}
                   onValueChange={(val) => setValue('personality', val)}
                 >
                   <SelectTrigger>
@@ -369,105 +431,106 @@ export default function ContentGenerator() {
                     {...register('context')}
                   />
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-4 opacity-50 pointer-events-none">
                   <div className="border-2 border-dashed rounded-lg p-4 text-center bg-background">
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="pdf-upload"
-                      disabled={uploadedFiles.length >= MAX_FILES}
-                    />
-                    <label
-                      htmlFor="pdf-upload"
-                      className={`cursor-pointer space-y-2 block ${
-                        uploadedFiles.length >= MAX_FILES ? 'opacity-50' : ''
-                      }`}
-                    >
-                      <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">
-                          Upload PDF document
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {uploadedFiles.length >= MAX_FILES
-                            ? `Maximum ${MAX_FILES} files reached`
-                            : `${uploadedFiles.length}/${MAX_FILES} files uploaded (PDF only)`}
-                        </p>
-                      </div>
-                    </label>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="pdf-upload"
+                    disabled={true}
+                  />
+                  <label
+                    htmlFor="pdf-upload"
+                    className="cursor-not-allowed space-y-2 block"
+                  >
+                    <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
+                    <div className="space-y-1">
+                    <p className="text-sm font-medium">
+                      Upload PDF document
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {uploadedFiles.length >= MAX_FILES
+                      ? `Maximum ${MAX_FILES} files reached`
+                      : `${uploadedFiles.length}/${MAX_FILES} files uploaded (PDF only)`}
+                    </p>
+                    </div>
+                  </label>
                   </div>
 
                   {uploadedFiles.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Uploaded Files</Label>
                     <div className="space-y-2">
-                      <Label>Uploaded Files</Label>
-                      <div className="space-y-2">
-                        {uploadedFiles.map((file) => (
-                          <div
-                            key={file.id}
-                            className="flex items-center justify-between p-2 bg-background rounded-md border"
-                          >
-                            <div className="flex items-center space-x-2">
-                              <div className="w-8 h-8 flex items-center justify-center bg-primary/10 rounded">
-                                <svg
-                                  className="w-4 h-4 text-primary"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                  />
-                                </svg>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">
-                                  {file.name}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Uploaded {file.uploadedAt.toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-muted-foreground hover:text-destructive"
-                                  disabled={isDeleting}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete File</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete &quot;{file.name}&quot;? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteFile(file.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        ))}
+                    {uploadedFiles.map((file) => (
+                      <div
+                      key={file.id}
+                      className="flex items-center justify-between p-2 bg-background rounded-md border"
+                      >
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 flex items-center justify-center bg-primary/10 rounded">
+                        <svg
+                          className="w-4 h-4 text-primary"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {file.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Uploaded {file.uploadedAt.toLocaleDateString()}
+                        </p>
+                        </div>
                       </div>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-destructive"
+                          disabled={isDeleting}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete File</AlertDialogTitle>
+                          <AlertDialogDescription>
+                          Are you sure you want to delete &quot;{file.name}&quot;? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                          onClick={() => handleDeleteFile(file.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                          Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      </div>
+                    ))}
                     </div>
+                  </div>
                   )}
+                </div>
+                <div className="text-center text-sm font-medium text-muted-foreground">
+                  <Sparkles className="inline-block w-4 h-4 mr-1" /> PDF upload feature coming soon!
                 </div>
               </div>
             </div>
@@ -622,6 +685,42 @@ export default function ContentGenerator() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label>Output Content</Label>
+              <Select
+                defaultValue={watch('outputContent') as "text" | "Notion" | "React"}
+                onValueChange={(val) => setValue('outputContent', val as "text" | "Notion" | "React")}              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {outputContentOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex min-h-min items-center gap-2">
+                        <div className="relative w-6 h-6 overflow-hidden rounded-full flex-shrink-0">
+                          <Image
+                            src={option.image}
+                            alt={option.label}
+                            width={24}
+                            height={24}
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 text-left min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {option.label}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {option.description}
+                          </p>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <Button type="submit" className="bg-slate-950 w-full" disabled={isGenerating}>
               <Wand2 className="mr-2 h-4 w-4" />
               {isGenerating ? 'Generating...' : 'Generate Content'}
@@ -648,7 +747,7 @@ export default function ContentGenerator() {
                   <div className="animate-pulse">Generating content...</div>
                 </div>
               ) : (
-                <div className="prose prose-sm whitespace-pre-line">
+                <div className="prose prose-sm whitespace-pre-wrap">
                   {generatedContent || 'Generated content will appear here'}
                 </div>
               )}
